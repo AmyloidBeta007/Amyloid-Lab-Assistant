@@ -1,0 +1,164 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    color: #0f172a;
+    background-color: #f8fafc;
+  }
+
+  code, pre, kbd, samp, .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Custom scrollbars for data tables and panels */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Amyloid Lab Assistant Themes */
+[data-theme="white"] {
+  --bg-primary: #f8fafc;
+  --bg-card: #ffffff;
+  --text-primary: #0f172a;
+}
+
+[data-theme="sepia"] {
+  --bg-primary: #f5eedc;
+  --bg-card: #faf4e8;
+  --text-primary: #3d2f20;
+}
+
+[data-theme="sepia"] body {
+  background-color: #f5eedc !important;
+  color: #3d2f20 !important;
+}
+
+[data-theme="sepia"] .bg-white {
+  background-color: #faf4e8 !important;
+  border-color: #e5d7c0 !important;
+  color: #3d2f20;
+}
+
+[data-theme="sepia"] .bg-slate-50 {
+  background-color: #f5eedc !important;
+}
+
+[data-theme="sepia"] .bg-slate-100 {
+  background-color: #ede4d1 !important;
+}
+
+[data-theme="sepia"] .text-slate-900,
+[data-theme="sepia"] .text-slate-800,
+[data-theme="sepia"] .text-slate-700 {
+  color: #3d2f20 !important;
+}
+
+[data-theme="sepia"] .text-slate-600,
+[data-theme="sepia"] .text-slate-500 {
+  color: #6e5842 !important;
+}
+
+[data-theme="sepia"] .border-slate-200,
+[data-theme="sepia"] .border-slate-100 {
+  border-color: #e2d2b7 !important;
+}
+
+/* Black Theme (Deep dark laboratory mode) */
+[data-theme="black"] {
+  --bg-primary: #09090b;
+  --bg-card: #121215;
+  --text-primary: #f4f4f5;
+}
+
+[data-theme="black"] body {
+  background-color: #09090b !important;
+  color: #f4f4f5 !important;
+}
+
+[data-theme="black"] .bg-white {
+  background-color: #121215 !important;
+  border-color: #27272a !important;
+  color: #f4f4f5;
+}
+
+[data-theme="black"] .bg-slate-50 {
+  background-color: #09090b !important;
+}
+
+[data-theme="black"] .bg-slate-100 {
+  background-color: #1a1a20 !important;
+  border-color: #2e2e38 !important;
+}
+
+[data-theme="black"] .text-slate-900,
+[data-theme="black"] .text-slate-800,
+[data-theme="black"] .text-slate-700 {
+  color: #f4f4f5 !important;
+}
+
+[data-theme="black"] .text-slate-600,
+[data-theme="black"] .text-slate-500 {
+  color: #a1a1aa !important;
+}
+
+[data-theme="black"] .border-slate-200,
+[data-theme="black"] .border-slate-100 {
+  border-color: #27272a !important;
+}
+
+/* Pink Theme (Soft rose / pastel aesthetic) */
+[data-theme="pink"] {
+  --bg-primary: #fff0f3;
+  --bg-card: #ffffff;
+  --text-primary: #4a0422;
+}
+
+[data-theme="pink"] body {
+  background-color: #fff0f3 !important;
+  color: #4a0422 !important;
+}
+
+[data-theme="pink"] .bg-white {
+  background-color: #ffffff !important;
+  border-color: #fbcfe8 !important;
+  color: #4a0422;
+}
+
+[data-theme="pink"] .bg-slate-50 {
+  background-color: #fff0f3 !important;
+}
+
+[data-theme="pink"] .bg-slate-100 {
+  background-color: #fce7f3 !important;
+  border-color: #f9a8d4 !important;
+}
+
+[data-theme="pink"] .text-slate-900,
+[data-theme="pink"] .text-slate-800 {
+  color: #4a0422 !important;
+}
+
+[data-theme="pink"] .text-slate-700,
+[data-theme="pink"] .text-slate-600 {
+  color: #701a75 !important;
+}
+
+[data-theme="pink"] .border-slate-200,
+[data-theme="pink"] .border-slate-100 {
+  border-color: #fbcfe8 !important;
+}

@@ -1,0 +1,6 @@
+{
+  "name": "BioSynth LabOS",
+  "description": "Comprehensive research workspace for biology and bioinformatics majors: paper recall, citation webs, lab protocols, bench multi-timers, slot bookings, mood tracking, and next actions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
