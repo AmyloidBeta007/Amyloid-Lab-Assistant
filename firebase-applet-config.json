@@ -3,6 +3,7 @@
   "appId": "1:749297703450:web:7e41f206054f59cdd78fa3",
   "apiKey": "AIzaSyCUyC7WGPu0UKtaf6tRoOW1arQEXsW_CM0",
   "authDomain": "gen-lang-client-0951683292.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-bioflowlabassist-0801b0f7-530a-4b96-adf2-fe93e533bd26",
   "storageBucket": "gen-lang-client-0951683292.firebasestorage.app",
   "messagingSenderId": "749297703450",
   "measurementId": "",

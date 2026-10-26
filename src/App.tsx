@@ -21,6 +21,18 @@ import { WhatToDoNext } from './components/WhatToDoNext';
 import { ReagentCalculatorModal } from './components/ReagentCalculatorModal';
 import { AIWritingBrainstormStudio } from './components/AIWritingBrainstormStudio';
 import { labAudio } from './utils/audioAlert';
+import { RotateCcw, Cloud, Users, Sparkles, ShieldCheck, X } from 'lucide-react';
+import { User } from 'firebase/auth';
+import { subscribeToAuth, googleSignIn, switchGoogleAccount, logout } from './services/authService';
+import {
+  saveUserWorkspace,
+  loadUserWorkspace,
+  syncUserProfile,
+  restartUserBrainstormIdeas,
+  GeneratedIdeaDraft
+} from './services/firestoreService';
+import { GoogleAccountModal } from './components/GoogleAccountModal';
+import { RestartConfirmModal } from './components/RestartConfirmModal';
 
 export default function App() {
   // Navigation
@@ -120,6 +132,170 @@ export default function App() {
 
   // Reagent Calculator Modal
   const [calculatorReagents, setCalculatorReagents] = useState<ProtocolReagent[] | null>(null);
+
+  // User Authentication & Cloud Sync
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isSigningIn, setIsSigningIn] = useState<boolean>(false);
+  const [showAccountModal, setShowAccountModal] = useState<boolean>(false);
+  const [showRestartModal, setShowRestartModal] = useState<boolean>(false);
+  const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
+  const [cloudSynced, setCloudSynced] = useState<boolean>(false);
+  const [authErrorNotice, setAuthErrorNotice] = useState<string | null>(null);
+  const [restartToast, setRestartToast] = useState<string | null>(null);
+  const [dismissAccountBanner, setDismissAccountBanner] = useState<boolean>(false);
+
+  // Brainstorm Ideas (Synced across devices to user Google Account)
+  const [brainstormIdeas, setBrainstormIdeas] = useState<GeneratedIdeaDraft[]>(() => {
+    const saved = localStorage.getItem('amyloid_brainstorm_ideas');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Listen for Google Auth state changes
+  useEffect(() => {
+    const unsubscribe = subscribeToAuth(async (user) => {
+      setCurrentUser(user);
+      if (user) {
+        await syncUserProfile(user);
+        const savedData = await loadUserWorkspace(user.uid);
+        if (savedData) {
+          if (savedData.papers && savedData.papers.length > 0) setPapers(savedData.papers);
+          if (savedData.protocols && savedData.protocols.length > 0) setProtocols(savedData.protocols);
+          if (savedData.targetOutcomes && savedData.targetOutcomes.length > 0) setTargetOutcomes(savedData.targetOutcomes);
+          if (savedData.discardedItems) setDiscardedItems(savedData.discardedItems);
+          if (savedData.pipelineRuns && savedData.pipelineRuns.length > 0) setPipelineRuns(savedData.pipelineRuns);
+          if (savedData.actionItems && savedData.actionItems.length > 0) setActionItems(savedData.actionItems);
+          if (savedData.moodLogs) setMoodLogs(savedData.moodLogs);
+          if (savedData.slots) setSlots(savedData.slots);
+          if (savedData.brainstormIdeas) setBrainstormIdeas(savedData.brainstormIdeas);
+          setLastSavedTime(
+            new Date(savedData.lastSavedAt || Date.now()).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit'
+            })
+          );
+          setCloudSynced(true);
+        } else {
+          // Initialize new account with starting laboratory datasets
+          await saveUserWorkspace(user.uid, {
+            papers,
+            protocols,
+            targetOutcomes,
+            discardedItems,
+            pipelineRuns,
+            actionItems,
+            moodLogs,
+            slots,
+            brainstormIdeas,
+            lastSavedAt: new Date().toISOString(),
+            savedByEmail: user.email || undefined
+          });
+          setLastSavedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+          setCloudSynced(true);
+        }
+      } else {
+        setCloudSynced(false);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Save brainstorm ideas locally
+  useEffect(() => {
+    localStorage.setItem('amyloid_brainstorm_ideas', JSON.stringify(brainstormIdeas));
+  }, [brainstormIdeas]);
+
+  // Debounced cloud auto-save whenever any research data changes
+  useEffect(() => {
+    if (!currentUser) return;
+    const timer = setTimeout(async () => {
+      try {
+        const result = await saveUserWorkspace(currentUser.uid, {
+          papers,
+          protocols,
+          targetOutcomes,
+          discardedItems,
+          pipelineRuns,
+          actionItems,
+          moodLogs,
+          slots,
+          brainstormIdeas,
+          lastSavedAt: new Date().toISOString(),
+          savedByEmail: currentUser.email || undefined
+        });
+        setCloudSynced(result.cloudSynced);
+        setLastSavedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      } catch (err) {
+        console.warn('Auto-save error:', err);
+      }
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [
+    papers,
+    protocols,
+    targetOutcomes,
+    discardedItems,
+    pipelineRuns,
+    actionItems,
+    moodLogs,
+    slots,
+    brainstormIdeas,
+    currentUser
+  ]);
+
+  // Authentication Handlers
+  const handleSignIn = async () => {
+    setIsSigningIn(true);
+    setAuthErrorNotice(null);
+    try {
+      const res = await googleSignIn('select_account');
+      if (res?.user) {
+        setShowAccountModal(false);
+        setRestartToast(`Connected Google account: ${res.user.displayName || res.user.email}`);
+        setTimeout(() => setRestartToast(null), 4000);
+      }
+    } catch (err: any) {
+      setAuthErrorNotice(err?.message || 'Failed to sign in with Google');
+    } finally {
+      setIsSigningIn(false);
+    }
+  };
+
+  const handleSwitchAccount = async () => {
+    setIsSigningIn(true);
+    setAuthErrorNotice(null);
+    try {
+      const res = await switchGoogleAccount();
+      if (res?.user) {
+        setShowAccountModal(false);
+        setRestartToast(`Switched to account: ${res.user.displayName || res.user.email}`);
+        setTimeout(() => setRestartToast(null), 4000);
+      }
+    } catch (err: any) {
+      setAuthErrorNotice(err?.message || 'Failed to switch Google account');
+    } finally {
+      setIsSigningIn(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await logout();
+    setCurrentUser(null);
+    setCloudSynced(false);
+    setShowAccountModal(false);
+    setRestartToast('Signed out of Google account');
+    setTimeout(() => setRestartToast(null), 4000);
+  };
+
+  // Restart Handlers (Delete existing ideas and start afresh)
+  const handleRestartIdeas = async () => {
+    setBrainstormIdeas([]);
+    localStorage.removeItem('amyloid_brainstorm_ideas');
+    if (currentUser) {
+      await restartUserBrainstormIdeas(currentUser.uid);
+    }
+    setRestartToast('All existing brainstorm ideas deleted. Starting afresh!');
+    setTimeout(() => setRestartToast(null), 4000);
+  };
 
   // Sync to localStorage
   useEffect(() => {
@@ -460,6 +636,13 @@ export default function App() {
         onThemeChange={setTheme}
         brightness={brightness}
         onBrightnessChange={setBrightness}
+        currentUser={currentUser}
+        onOpenAccountModal={() => setShowAccountModal(true)}
+        onSwitchAccount={handleSwitchAccount}
+        onSignOut={handleSignOut}
+        lastSavedTime={lastSavedTime}
+        cloudSynced={cloudSynced}
+        onOpenRestartModal={() => setShowRestartModal(true)}
       />
 
       {/* Main Content Area - CSS selector 2: div#root:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) */}
@@ -478,6 +661,44 @@ export default function App() {
           transition: 'filter 0.15s ease-out, background-color 0.2s ease-in-out'
         }}
       >
+        {/* Google Account Cloud Save Notice Banner (if logged out) */}
+        {!currentUser && !dismissAccountBanner && (
+          <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-teal-50 via-indigo-50 to-amber-50 border border-teal-200/80 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-slate-800 animate-in fade-in">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center p-1.5 shadow-sm shrink-0">
+                <svg className="w-full h-full" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm font-bold text-slate-900">
+                  Save your laboratory research with a Google Account
+                </p>
+                <p className="text-xs text-slate-600">
+                  Sign in once to automatically backup your papers, protocols, and ideas to the cloud and switch accounts seamlessly.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+              <button
+                onClick={() => setShowAccountModal(true)}
+                className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
+              >
+                Sign In with Google
+              </button>
+              <button
+                onClick={() => setDismissAccountBanner(true)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-white/60 transition-colors"
+                aria-label="Dismiss banner"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
         {activeTab === 'papers' && (
           <PaperSynthesizer
             papers={papers}
@@ -556,6 +777,11 @@ export default function App() {
               setActiveTab('protocols');
             }}
             onPushToPaperNotes={handlePushSynthesisToPaperNotes}
+            brainstormIdeas={brainstormIdeas as any}
+            onIdeasChange={setBrainstormIdeas as any}
+            onRestartSession={handleRestartIdeas}
+            currentUser={currentUser}
+            onSwitchAccount={handleSwitchAccount}
           />
         )}
 
@@ -618,6 +844,40 @@ export default function App() {
         />
       )}
 
+      {/* Google Account & Switch Account Modal */}
+      <GoogleAccountModal
+        isOpen={showAccountModal}
+        onClose={() => setShowAccountModal(false)}
+        currentUser={currentUser}
+        onSignIn={handleSignIn}
+        onSwitchAccount={handleSwitchAccount}
+        onSignOut={handleSignOut}
+        isSigningIn={isSigningIn}
+        lastSavedTime={lastSavedTime}
+        cloudSynced={cloudSynced}
+        errorMessage={authErrorNotice}
+      />
+
+      {/* Restart Ideas & Start Afresh Modal */}
+      <RestartConfirmModal
+        isOpen={showRestartModal}
+        onClose={() => setShowRestartModal(false)}
+        onConfirmRestartAll={handleRestartIdeas}
+        onConfirmResetScratchpad={() => {
+          setRestartToast('Editor scratchpad cleared. Ready to start afresh!');
+          setTimeout(() => setRestartToast(null), 4000);
+        }}
+        ideasCount={brainstormIdeas.length}
+      />
+
+      {/* Floating Status Toast */}
+      {restartToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-xl shadow-xl border border-slate-700 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+          <RotateCcw className="w-3.5 h-3.5 text-teal-400" />
+          <span>{restartToast}</span>
+        </div>
+      )}
+
       {/* Footer */}
       <footer
         className={`border-t py-6 mt-12 text-xs transition-colors ${
@@ -630,17 +890,10 @@ export default function App() {
             : 'border-slate-200 bg-white text-slate-500'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className={`font-bold ${theme === 'black' ? 'text-white' : 'text-slate-800'}`}>Amyloid Lab Assistant</span>
-            <span aria-hidden="true">·</span>
-            <span>Amyloid & Proteopathy Research Cockpit</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span>Wet & Dry Discard Protocol Active</span>
-            <span aria-hidden="true">·</span>
-            <span>Bioinformatics Dry Lab Connected</span>
-          </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+          <span className={`font-bold ${theme === 'black' ? 'text-white' : 'text-slate-800'}`}>
+            Amyloid Lab Assistant
+          </span>
         </div>
       </footer>
     </div>

@@ -229,27 +229,55 @@ Always structure your output clearly with Markdown headings, bullet points, and 
   }
 });
 
+// Health check endpoint for dev server status verification
+app.get('/api/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    name: 'Amyloid Lab Assistant',
+    port: PORT,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Process-level error guards to prevent unexpected exit
+process.on('uncaughtException', (err) => {
+  console.error('[Amyloid Server] Uncaught exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Amyloid Server] Unhandled rejection at:', promise, 'reason:', reason);
+});
+
 // Mount Vite or serve static files
 async function startServer() {
-  if (!isProd) {
-    const { createServer: createViteServer } = await import('vite');
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-  } else {
-    app.use(express.static(path.resolve(__dirname, 'dist')));
-    app.get('*', (_req, res) => {
-      res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
-    });
-  }
+  try {
+    if (!isProd) {
+      const { createServer: createViteServer } = await import('vite');
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: 'spa',
+      });
+      app.use(vite.middlewares);
+    } else {
+      app.use(express.static(path.resolve(__dirname, 'dist')));
+      app.get('*', (_req, res) => {
+        res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+      });
+    }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`BioSynth LabOS server running on http://0.0.0.0:${PORT}`);
-  });
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`[Amyloid Server] Amyloid Lab Assistant running on http://0.0.0.0:${PORT}`);
+    });
+
+    server.on('error', (err: any) => {
+      console.error('[Amyloid Server] HTTP server error:', err);
+    });
+  } catch (err) {
+    console.error('[Amyloid Server] Failed to initialize server:', err);
+  }
 }
 
 startServer().catch(err => {
-  console.error('Failed to start server:', err);
+  console.error('[Amyloid Server] Fatal startup error:', err);
 });
+

@@ -1,5 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Timer, Sparkles, Sun, Palette, Check, RotateCcw, Eye } from 'lucide-react';
+import {
+  Timer,
+  Sparkles,
+  Sun,
+  Palette,
+  Check,
+  RotateCcw,
+  Eye,
+  User as UserIcon,
+  Users,
+  LogOut,
+  Cloud,
+  ChevronDown
+} from 'lucide-react';
+import { User } from 'firebase/auth';
 
 export type NavTab =
   | 'papers'
@@ -24,6 +38,13 @@ interface TopNavProps {
   onThemeChange: (theme: LabTheme) => void;
   brightness: number;
   onBrightnessChange: (brightness: number) => void;
+  currentUser: User | null;
+  onOpenAccountModal: () => void;
+  onSwitchAccount: () => void;
+  onSignOut: () => void;
+  lastSavedTime: string | null;
+  cloudSynced: boolean;
+  onOpenRestartModal?: () => void;
 }
 
 export const TopNav: React.FC<TopNavProps> = ({
@@ -36,11 +57,20 @@ export const TopNav: React.FC<TopNavProps> = ({
   theme,
   onThemeChange,
   brightness,
-  onBrightnessChange
+  onBrightnessChange,
+  currentUser,
+  onOpenAccountModal,
+  onSwitchAccount,
+  onSignOut,
+  lastSavedTime,
+  cloudSynced,
+  onOpenRestartModal
 }) => {
   const totalDiscards = wetDiscardCount + dryDiscardCount;
   const [showDisplaySettings, setShowDisplaySettings] = useState(false);
+  const [showAccountDropdown, setShowAccountDropdown] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const accountRef = useRef<HTMLDivElement>(null);
 
   // Close display settings popover when clicking outside
   useEffect(() => {
@@ -48,14 +78,15 @@ export const TopNav: React.FC<TopNavProps> = ({
       if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
         setShowDisplaySettings(false);
       }
+      if (accountRef.current && !accountRef.current.contains(event.target as Node)) {
+        setShowAccountDropdown(false);
+      }
     }
-    if (showDisplaySettings) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showDisplaySettings]);
+  }, []);
 
   const themes: { id: LabTheme; label: string; tag: string; description: string; previewBg: string; borderCol: string }[] = [
     {
@@ -100,10 +131,18 @@ export const TopNav: React.FC<TopNavProps> = ({
     { value: 130, label: '130% Max' }
   ];
 
+  const userInitial = currentUser
+    ? (currentUser.displayName || currentUser.email || 'A')[0].toUpperCase()
+    : 'G';
+
+  const userDisplayName = currentUser
+    ? currentUser.displayName || currentUser.email?.split('@')[0] || 'Researcher'
+    : 'Guest';
+
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-slate-200 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-        {/* Zone 1: CSS selector 1: div#root:nth-of-type(1) > div:nth-of-type(1) > header:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(1) */}
+        {/* Zone 1: Brand & Logo */}
         <button
           onClick={() => onTabChange('papers')}
           className="flex items-center gap-2.5 text-left text-slate-900 transition-colors focus-visible:outline-2 focus-visible:outline-teal-600 rounded-lg p-1 -ml-1 hover:bg-slate-100/70 shrink-0"
@@ -114,17 +153,14 @@ export const TopNav: React.FC<TopNavProps> = ({
               <span className="text-[11px] font-black tracking-tighter text-teal-300">ALA</span>
             </div>
           </div>
-          <div className="flex flex-col">
+          <div className="flex flex-col justify-center">
             <span className="text-base sm:text-lg font-extrabold tracking-tight text-slate-900 leading-tight">
               Amyloid Lab Assistant
-            </span>
-            <span className="text-[10px] font-mono font-medium text-slate-400 tracking-wider uppercase">
-              Amyloid & Proteopathy Research OS
             </span>
           </div>
         </button>
 
-        {/* Zone 2: Concise single-line nav links with hover underlines */}
+        {/* Zone 2: Navigation Links (Desktop) */}
         <nav className="hidden xl:flex items-center gap-4 text-sm font-medium text-slate-600">
           <button
             onClick={() => onTabChange('papers')}
@@ -171,37 +207,33 @@ export const TopNav: React.FC<TopNavProps> = ({
                 : 'hover:text-slate-900'
             }`}
           >
-            Targets & Outcomes
+            Target Ledger
           </button>
 
-          {/* AI Writing, Brainstorm & Google Docs Export */}
+          {/* AI Brainstorm Studio */}
           <button
             onClick={() => onTabChange('ai-studio')}
             className={`whitespace-nowrap shrink-0 transition-colors py-1 flex items-center gap-1.5 ${
               activeTab === 'ai-studio'
-                ? 'text-indigo-600 font-bold border-b-2 border-indigo-600'
-                : 'text-slate-700 hover:text-indigo-600 font-medium'
+                ? 'text-indigo-700 font-bold border-b-2 border-indigo-600'
+                : 'text-indigo-600 hover:text-indigo-800 font-medium'
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
-            <span>AI Brainstorm</span>
-            <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-indigo-50 text-indigo-700 font-bold uppercase border border-indigo-200">
-              Docs
-            </span>
+            <span>AI Brainstorm & Docs</span>
           </button>
 
-          {/* Discard & Memory Vault */}
           <button
             onClick={() => onTabChange('discards')}
             className={`whitespace-nowrap shrink-0 transition-colors py-1 flex items-center gap-1.5 ${
               activeTab === 'discards'
-                ? 'text-amber-700 font-bold border-b-2 border-amber-600'
-                : 'text-slate-600 hover:text-amber-700'
+                ? 'text-amber-800 font-semibold border-b-2 border-amber-600'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <span>Discard Vault</span>
+            <span>Discards & Memory</span>
             {totalDiscards > 0 && (
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 text-slate-800 font-bold">
+              <span className="text-[11px] font-mono px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 font-bold">
                 {totalDiscards}
               </span>
             )}
@@ -226,30 +258,151 @@ export const TopNav: React.FC<TopNavProps> = ({
                 : 'hover:text-slate-900'
             }`}
           >
-            Mood & Actions
+            Next Actions
           </button>
         </nav>
 
-        {/* Zone 3: Display Controls (Background Colors & Brightness) + Quick Action */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          {/* Quick-switch background color chips */}
-          <div className="hidden sm:flex items-center gap-1 bg-slate-100/80 p-1 rounded-lg border border-slate-200/80">
-            {themes.map(t => (
+        {/* Zone 3: Right Controls (Account, Restart, Theme, Timer) */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Restart Ideas & Start Afresh Button */}
+          {onOpenRestartModal && (
+            <button
+              onClick={onOpenRestartModal}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-700 transition-all shrink-0 shadow-sm"
+              title="Restart ideas & start afresh"
+              aria-label="Restart ideas and start afresh"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-slate-500 hover:text-rose-600 transition-colors" />
+              <span className="hidden sm:inline">Restart</span>
+            </button>
+          )}
+
+          {/* Google Account Profile & Switch Account Button */}
+          <div className="relative" ref={accountRef}>
+            {currentUser ? (
+              /* User logged in: Profile Chip */
               <button
-                key={t.id}
-                onClick={() => onThemeChange(t.id)}
-                title={`${t.label} Background ${t.tag ? `(${t.tag})` : ''}`}
-                className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${t.previewBg} ${t.borderCol} border ${
-                  theme === t.id
-                    ? 'ring-2 ring-teal-600 ring-offset-1 scale-105 shadow-xs'
-                    : 'opacity-75 hover:opacity-100 hover:scale-105'
-                }`}
+                onClick={() => setShowAccountDropdown(!showAccountDropdown)}
+                className="inline-flex items-center gap-1.5 p-1 sm:px-2.5 sm:py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 transition-all shadow-sm focus-visible:outline-2 focus-visible:outline-teal-600"
+                aria-label="Open Account Menu"
               >
-                {theme === t.id && (
-                  <Check className={`w-3 h-3 ${t.id === 'black' ? 'text-white' : 'text-slate-800'}`} />
+                {currentUser.photoURL ? (
+                  <img
+                    src={currentUser.photoURL}
+                    alt={userDisplayName}
+                    className="w-5 h-5 rounded-full object-cover shrink-0"
+                  />
+                ) : (
+                  <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-teal-600 to-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                    {userInitial}
+                  </div>
                 )}
+                <span className="hidden md:inline font-bold max-w-[90px] truncate">
+                  {userDisplayName}
+                </span>
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <ChevronDown className="w-3 h-3 text-slate-400 hidden sm:inline" />
               </button>
-            ))}
+            ) : (
+              /* User logged out: Sign in with Google Button */
+              <button
+                onClick={onOpenAccountModal}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 transition-all shadow-sm focus-visible:outline-2 focus-visible:outline-teal-600"
+                title="Create an account using Google to save your work"
+                aria-label="Sign in with Google"
+              >
+                {/* Google Colored Logo */}
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                  />
+                </svg>
+                <span className="hidden sm:inline">Sign In</span>
+                <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 rounded hidden lg:inline">
+                  Save Work
+                </span>
+              </button>
+            )}
+
+            {/* Account Dropdown Menu */}
+            {currentUser && showAccountDropdown && (
+              <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-3 z-50 text-slate-800 animate-in fade-in zoom-in-95 duration-150">
+                {/* Account Details */}
+                <div className="flex items-center gap-2.5 pb-2.5 border-b border-slate-100">
+                  {currentUser.photoURL ? (
+                    <img
+                      src={currentUser.photoURL}
+                      alt={userDisplayName}
+                      className="w-9 h-9 rounded-full object-cover ring-2 ring-teal-500/30"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-teal-600 to-indigo-600 text-white font-bold flex items-center justify-center text-sm shadow-sm shrink-0">
+                      {userInitial}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-xs text-slate-900 truncate">
+                      {currentUser.displayName || 'Google Researcher'}
+                    </p>
+                    <p className="text-[11px] text-slate-500 truncate">{currentUser.email}</p>
+                  </div>
+                </div>
+
+                {/* Cloud Save Status */}
+                <div className="my-2 p-2 bg-emerald-50/80 rounded-lg flex items-center justify-between text-[11px]">
+                  <div className="flex items-center gap-1.5 text-emerald-900 font-medium">
+                    <Cloud className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Cloud Auto-Save</span>
+                  </div>
+                  <span className="text-emerald-700 text-[10px] font-mono">
+                    {lastSavedTime ? `Saved ${lastSavedTime}` : 'Active'}
+                  </span>
+                </div>
+
+                {/* Actions */}
+                <div className="space-y-1 pt-1">
+                  {/* Switch Account */}
+                  <button
+                    onClick={() => {
+                      setShowAccountDropdown(false);
+                      onSwitchAccount();
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-teal-50 hover:text-teal-900 rounded-lg transition-colors font-medium text-left"
+                  >
+                    <Users className="w-3.5 h-3.5 text-teal-600" />
+                    <span>Switch Google Account</span>
+                  </button>
+
+                  {/* Sign Out */}
+                  <button
+                    onClick={() => {
+                      setShowAccountDropdown(false);
+                      onSignOut();
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-rose-50 hover:text-rose-700 rounded-lg transition-colors font-medium text-left"
+                  >
+                    <LogOut className="w-3.5 h-3.5 text-slate-400 group-hover:text-rose-600" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Display & Brightness Popover Trigger */}
@@ -466,17 +619,24 @@ export const TopNav: React.FC<TopNavProps> = ({
           </button>
         </div>
 
-        {/* Mobile color toggles */}
-        <div className="flex sm:hidden items-center gap-1 shrink-0 pl-2 border-l border-slate-200">
-          {themes.map(t => (
+        {/* Mobile quick actions: Restart + Account */}
+        <div className="flex items-center gap-1.5 shrink-0 pl-2 border-l border-slate-200">
+          {onOpenRestartModal && (
             <button
-              key={t.id}
-              onClick={() => onThemeChange(t.id)}
-              className={`w-5 h-5 rounded-full border ${t.previewBg} ${t.borderCol} ${
-                theme === t.id ? 'ring-2 ring-teal-500 scale-110' : 'opacity-70'
-              }`}
-            />
-          ))}
+              onClick={onOpenRestartModal}
+              className="px-2 py-1 bg-white border border-slate-200 rounded text-slate-700 text-[11px] font-semibold flex items-center gap-1"
+            >
+              <RotateCcw className="w-3 h-3 text-rose-500" />
+              <span>Restart</span>
+            </button>
+          )}
+          <button
+            onClick={onOpenAccountModal}
+            className="px-2 py-1 bg-slate-900 text-white rounded text-[11px] font-semibold flex items-center gap-1"
+          >
+            <UserIcon className="w-3 h-3" />
+            <span>{currentUser ? 'Account' : 'Sign In'}</span>
+          </button>
         </div>
       </div>
     </header>

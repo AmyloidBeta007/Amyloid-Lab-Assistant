@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account profile for Amyloid Lab Assistant",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    },
+    "UserWorkspace": {
+      "title": "UserWorkspace",
+      "description": "User's saved research state, papers, protocols, targets, and brainstorm ideas",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "papers": { "type": "array" },
+        "protocols": { "type": "array" },
+        "targetOutcomes": { "type": "array" },
+        "discardedItems": { "type": "array" },
+        "pipelineRuns": { "type": "array" },
+        "actionItems": { "type": "array" },
+        "moodLogs": { "type": "array" },
+        "slots": { "type": "array" },
+        "brainstormIdeas": { "type": "array" },
+        "lastSavedAt": { "type": "string" }
+      },
+      "required": ["userId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile information"
+    },
+    "/users/{userId}/workspace/{docId}": {
+      "schema": "UserWorkspace",
+      "description": "User workspace records and saved ideas"
+    }
+  }
+}
