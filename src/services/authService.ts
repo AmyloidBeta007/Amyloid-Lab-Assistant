@@ -2,6 +2,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
   getAuth,
   signInWithPopup,
+  signInWithCredential,
   GoogleAuthProvider,
   onAuthStateChanged,
   User,
@@ -9,8 +10,26 @@ import {
 } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 
+// Dynamic authDomain for Vercel / Custom domain proxying
+// When running on Vercel or a custom domain and custom domain auth is active, authDomain uses current hostname
+// so Google shows your authentic domain instead of gen-lang-client-0951683292.firebaseapp.com
+const getAuthDomain = (): string => {
+  if (typeof window === 'undefined') return firebaseConfig.authDomain;
+  const host = window.location.hostname;
+  const preferCustom = localStorage.getItem('amyloid_use_custom_auth_domain') === 'true';
+  if (preferCustom && host && host !== 'localhost' && !host.includes('.run.app') && !host.includes('firebaseapp.com')) {
+    return host;
+  }
+  return firebaseConfig.authDomain;
+};
+
+const activeConfig = {
+  ...firebaseConfig,
+  authDomain: getAuthDomain()
+};
+
 // Initialize Firebase App singleton
-export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+export const app = getApps().length === 0 ? initializeApp(activeConfig) : getApp();
 export const auth = getAuth(app);
 
 // Desired Google Workspace Scopes (Google Docs, Google Drive files, Gmail sending & drafting)
@@ -35,6 +54,7 @@ export interface AuthErrorInfo {
   message: string;
   isUnauthorizedDomain: boolean;
   isAccessBlockedOrVerification: boolean;
+  isRedirectUriMismatch: boolean;
   isPopupClosed: boolean;
   currentDomain: string;
 }
@@ -55,6 +75,13 @@ export function parseAuthError(error: any): AuthErrorInfo {
     msg.toLowerCase().includes('access blocked') ||
     code === 'auth/access-denied';
 
+  const isRedirectUriMismatch =
+    msg.toLowerCase().includes('redirect_uri_mismatch') ||
+    msg.toLowerCase().includes('redirect uri') ||
+    msg.toLowerCase().includes('invalid request') ||
+    msg.toLowerCase().includes('request is invalid') ||
+    code === 'auth/invalid-credential';
+
   const isPopupClosed =
     code === 'auth/popup-closed-by-user' ||
     msg.toLowerCase().includes('popup-closed-by-user') ||
@@ -65,6 +92,7 @@ export function parseAuthError(error: any): AuthErrorInfo {
     message: msg,
     isUnauthorizedDomain,
     isAccessBlockedOrVerification,
+    isRedirectUriMismatch,
     isPopupClosed,
     currentDomain: typeof window !== 'undefined' ? window.location.hostname : ''
   };
@@ -117,6 +145,25 @@ export const googleSignIn = async (promptType: 'consent' | 'select_account' = 's
     return { user: result.user, accessToken: cachedAccessToken };
   } catch (error: any) {
     console.error('Google Sign-in error:', error);
+    throw error;
+  } finally {
+    isSigningIn = false;
+  }
+};
+
+/**
+ * Native Sign-In using Google Identity Services (GIS) ID Token
+ * Avoids popup redirects to gen-lang-client-0951683292.firebaseapp.com completely!
+ */
+export const signInWithGoogleIdToken = async (idToken: string): Promise<{ user: User; accessToken: string | null }> => {
+  try {
+    isSigningIn = true;
+    const credential = GoogleAuthProvider.credential(idToken);
+    const result = await signInWithCredential(auth, credential);
+    cachedAccessToken = idToken;
+    return { user: result.user, accessToken: cachedAccessToken };
+  } catch (error: any) {
+    console.error('Google ID token sign-in error:', error);
     throw error;
   } finally {
     isSigningIn = false;

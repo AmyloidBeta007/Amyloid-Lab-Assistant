@@ -21,7 +21,7 @@ import { WhatToDoNext } from './components/WhatToDoNext';
 import { ReagentCalculatorModal } from './components/ReagentCalculatorModal';
 import { AIWritingBrainstormStudio } from './components/AIWritingBrainstormStudio';
 import { labAudio } from './utils/audioAlert';
-import { RotateCcw, Cloud, Users, Sparkles, ShieldCheck, X } from 'lucide-react';
+import { RotateCcw, Cloud, Users, Sparkles, ShieldCheck, X, Globe, AlertCircle } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { subscribeToAuth, googleSignIn, switchGoogleAccount, logout } from './services/authService';
 import {
@@ -33,6 +33,17 @@ import {
 } from './services/firestoreService';
 import { GoogleAccountModal } from './components/GoogleAccountModal';
 import { RestartConfirmModal } from './components/RestartConfirmModal';
+import { LocalResearcherProfile } from './types';
+import {
+  getLocalProfiles,
+  saveLocalProfiles,
+  getActiveLocalProfile,
+  setActiveLocalProfileId,
+  isLocalModePreferred,
+  setLocalModePreferred,
+  exportWorkspaceToJsonFile,
+  parseWorkspaceBackupFile
+} from './services/localProfileService';
 
 export default function App() {
   // Navigation
@@ -143,6 +154,11 @@ export default function App() {
   const [authErrorNotice, setAuthErrorNotice] = useState<string | null>(null);
   const [restartToast, setRestartToast] = useState<string | null>(null);
   const [dismissAccountBanner, setDismissAccountBanner] = useState<boolean>(false);
+
+  // 100% Free Local Researcher Profiles (No Firebase, No Cloud Fees)
+  const [localProfiles, setLocalProfiles] = useState<LocalResearcherProfile[]>(() => getLocalProfiles());
+  const [activeLocalProfile, setActiveLocalProfile] = useState<LocalResearcherProfile>(() => getActiveLocalProfile());
+  const [preferLocalMode, setPreferLocalMode] = useState<boolean>(() => isLocalModePreferred());
 
   // Brainstorm Ideas (Synced across devices to user Google Account)
   const [brainstormIdeas, setBrainstormIdeas] = useState<GeneratedIdeaDraft[]>(() => {
@@ -255,6 +271,7 @@ export default function App() {
       }
     } catch (err: any) {
       setAuthErrorNotice(err?.message || 'Failed to sign in with Google');
+      setShowAccountModal(true);
     } finally {
       setIsSigningIn(false);
     }
@@ -272,6 +289,7 @@ export default function App() {
       }
     } catch (err: any) {
       setAuthErrorNotice(err?.message || 'Failed to switch Google account');
+      setShowAccountModal(true);
     } finally {
       setIsSigningIn(false);
     }
@@ -283,6 +301,90 @@ export default function App() {
     setCloudSynced(false);
     setShowAccountModal(false);
     setRestartToast('Signed out of Google account');
+    setTimeout(() => setRestartToast(null), 4000);
+  };
+
+  // Local Profile & Backup Handlers (100% Free Local Mode)
+  const handleSelectLocalProfile = (profileId: string) => {
+    setActiveLocalProfileId(profileId);
+    const selected = localProfiles.find(p => p.id === profileId);
+    if (selected) {
+      setActiveLocalProfile(selected);
+      setRestartToast(`Switched active profile: ${selected.name}`);
+      setTimeout(() => setRestartToast(null), 3000);
+    }
+  };
+
+  const handleCreateLocalProfile = (name: string, role: string, email?: string) => {
+    const colors = ['#0d9488', '#4f46e5', '#d97706', '#e11d48', '#7c3aed', '#0284c7'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    const newProfile: LocalResearcherProfile = {
+      id: `profile-${Date.now()}`,
+      name,
+      role,
+      email,
+      color: randomColor,
+      createdAt: new Date().toISOString()
+    };
+    const updated = [...localProfiles, newProfile];
+    setLocalProfiles(updated);
+    saveLocalProfiles(updated);
+    setActiveLocalProfileId(newProfile.id);
+    setActiveLocalProfile(newProfile);
+    setRestartToast(`Created & switched to profile: ${newProfile.name}`);
+    setTimeout(() => setRestartToast(null), 3000);
+  };
+
+  const handleUpdateActiveProfileName = (name: string, role: string) => {
+    const updated = localProfiles.map(p =>
+      p.id === activeLocalProfile.id ? { ...p, name, role } : p
+    );
+    setLocalProfiles(updated);
+    saveLocalProfiles(updated);
+    setActiveLocalProfile(prev => ({ ...prev, name, role }));
+    setRestartToast(`Updated profile: ${name}`);
+    setTimeout(() => setRestartToast(null), 3000);
+  };
+
+  const handleTogglePreferLocalMode = (prefer: boolean) => {
+    setPreferLocalMode(prefer);
+    setLocalModePreferred(prefer);
+    if (prefer) {
+      setAuthErrorNotice(null);
+      setRestartToast('100% Free Local Mode active (No Firebase fees)');
+      setTimeout(() => setRestartToast(null), 3500);
+    }
+  };
+
+  const handleExportBackup = () => {
+    exportWorkspaceToJsonFile({
+      exportedBy: currentUser?.displayName || activeLocalProfile.name,
+      papers,
+      protocols,
+      targetOutcomes,
+      discardedItems,
+      pipelineRuns,
+      actionItems,
+      moodLogs,
+      slots,
+      brainstormIdeas
+    });
+    setRestartToast('Workspace backup downloaded (.json)');
+    setTimeout(() => setRestartToast(null), 3500);
+  };
+
+  const handleImportBackup = async (file: File) => {
+    const data = await parseWorkspaceBackupFile(file);
+    if (data.papers && data.papers.length > 0) setPapers(data.papers);
+    if (data.protocols && data.protocols.length > 0) setProtocols(data.protocols);
+    if (data.targetOutcomes && data.targetOutcomes.length > 0) setTargetOutcomes(data.targetOutcomes);
+    if (data.discardedItems) setDiscardedItems(data.discardedItems);
+    if (data.pipelineRuns && data.pipelineRuns.length > 0) setPipelineRuns(data.pipelineRuns);
+    if (data.actionItems && data.actionItems.length > 0) setActionItems(data.actionItems);
+    if (data.moodLogs) setMoodLogs(data.moodLogs);
+    if (data.slots) setSlots(data.slots);
+    if (data.brainstormIdeas) setBrainstormIdeas(data.brainstormIdeas);
+    setRestartToast(`Restored ${data.papers?.length || 0} papers and laboratory workspace!`);
     setTimeout(() => setRestartToast(null), 4000);
   };
 
@@ -637,6 +739,7 @@ export default function App() {
         brightness={brightness}
         onBrightnessChange={setBrightness}
         currentUser={currentUser}
+        activeLocalProfile={activeLocalProfile}
         onOpenAccountModal={() => setShowAccountModal(true)}
         onSwitchAccount={handleSwitchAccount}
         onSignOut={handleSignOut}
@@ -661,8 +764,99 @@ export default function App() {
           transition: 'filter 0.15s ease-out, background-color 0.2s ease-in-out'
         }}
       >
-        {/* Google Account Cloud Save Notice Banner (if logged out) */}
-        {!currentUser && !dismissAccountBanner && (
+        {/* Firebase Domain Authorization Notice Banner */}
+        {authErrorNotice &&
+          !preferLocalMode &&
+          (authErrorNotice.toLowerCase().includes('unauthorized-domain') ||
+            authErrorNotice.toLowerCase().includes('unauthorized domain')) && (
+            <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-300 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-slate-800 animate-in fade-in">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                  <Globe className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm font-bold text-amber-950">
+                    Domain Authorization Required in Firebase
+                  </p>
+                  <p className="text-xs text-amber-800">
+                    Your current domain ({typeof window !== 'undefined' ? window.location.hostname : 'current domain'}) needs to be added to Firebase Authorized Domains for project gen-lang-client-0951683292.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                <button
+                  onClick={() => setShowAccountModal(true)}
+                  className="px-3.5 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-lg text-xs font-bold transition-colors shadow-xs"
+                >
+                  View 30-Sec Fix
+                </button>
+                <button
+                  onClick={() => handleTogglePreferLocalMode(true)}
+                  className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition-colors shadow-xs"
+                >
+                  Bypass (Use Free Local Mode)
+                </button>
+                <button
+                  onClick={() => setAuthErrorNotice(null)}
+                  className="p-1.5 text-amber-700 hover:text-amber-900 rounded-lg hover:bg-amber-100 transition-colors"
+                  aria-label="Dismiss banner"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+        {/* Google OAuth Redirect URI Mismatch Notice Banner (Error 400) */}
+        {authErrorNotice &&
+          !preferLocalMode &&
+          (authErrorNotice.toLowerCase().includes('redirect_uri_mismatch') ||
+            authErrorNotice.toLowerCase().includes('redirect uri') ||
+            authErrorNotice.toLowerCase().includes('invalid request') ||
+            authErrorNotice.toLowerCase().includes('400')) && (
+            <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-300 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-slate-800 animate-in fade-in">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-rose-100 text-rose-800 flex items-center justify-center shrink-0">
+                  <AlertCircle className="w-5 h-5 text-rose-700" />
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm font-bold text-rose-950 flex items-center gap-2">
+                    <span>Google OAuth Error 400: Redirect URI Registration Required</span>
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-rose-200 text-rose-900 font-bold uppercase">
+                      30-Sec Fix
+                    </span>
+                  </p>
+                  <p className="text-xs text-rose-900/85 mt-0.5">
+                    Google blocked sign-in because <code>https://gen-lang-client-0951683292.firebaseapp.com/__/auth/handler</code> is missing from Authorized redirect URIs in Google Cloud Console.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 flex-wrap">
+                <button
+                  onClick={() => setShowAccountModal(true)}
+                  className="px-3.5 py-1.5 bg-rose-700 hover:bg-rose-800 text-white rounded-lg text-xs font-bold transition-colors shadow-xs"
+                >
+                  View 30-Sec Fix
+                </button>
+                <button
+                  onClick={() => handleTogglePreferLocalMode(true)}
+                  className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition-colors shadow-xs"
+                >
+                  Bypass (Use Free Local Mode)
+                </button>
+                <button
+                  onClick={() => setAuthErrorNotice(null)}
+                  className="p-1.5 text-rose-700 hover:text-rose-900 rounded-lg hover:bg-rose-100 transition-colors"
+                  aria-label="Dismiss banner"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+        {/* Google Account Cloud Save Notice Banner (if logged out and not in pure local mode) */}
+        {!currentUser && !preferLocalMode && !dismissAccountBanner && (
           <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-teal-50 via-indigo-50 to-amber-50 border border-teal-200/80 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-slate-800 animate-in fade-in">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center p-1.5 shadow-sm shrink-0">
@@ -675,14 +869,22 @@ export default function App() {
               </div>
               <div>
                 <p className="text-xs sm:text-sm font-bold text-slate-900">
-                  Save your laboratory research with a Google Account
+                  Save your laboratory research with Google or use Free Local Mode
                 </p>
                 <p className="text-xs text-slate-600">
-                  Sign in once to automatically backup your papers, protocols, and ideas to the cloud and switch accounts seamlessly.
+                  No login is required. You can sign in to backup to Google Cloud, or click &ldquo;Use Without Login&rdquo; to save directly to this browser with zero fees.
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 flex-wrap">
+              <button
+                onClick={() => handleTogglePreferLocalMode(true)}
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
+                title="Bypass login completely - save privately in your browser"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Use Without Login (100% Free)</span>
+              </button>
               <button
                 onClick={() => setShowAccountModal(true)}
                 className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
@@ -695,6 +897,36 @@ export default function App() {
                 aria-label="Dismiss banner"
               >
                 <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Active Local Mode Notification (if user chose to work without login) */}
+        {!currentUser && preferLocalMode && !dismissAccountBanner && (
+          <div className="mb-6 p-3 px-4 rounded-xl bg-emerald-50/90 border border-emerald-200/90 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-slate-800 text-xs animate-in fade-in">
+            <div className="flex items-center gap-2.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <div>
+                <span className="font-bold text-emerald-950">Free Local Mode Active:</span>{' '}
+                <span className="text-emerald-800">
+                  Logged in as <strong>{activeLocalProfile?.name || 'Lead Researcher'}</strong>. All research papers, protocols, and ideas are saved directly in this browser with 0 fees.
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-auto">
+              <button
+                onClick={() => setShowAccountModal(true)}
+                className="font-bold text-emerald-800 hover:text-emerald-950 underline text-xs"
+              >
+                Switch Account / Backup
+              </button>
+              <button
+                onClick={() => setDismissAccountBanner(true)}
+                className="p-1 text-emerald-600 hover:text-emerald-800 rounded hover:bg-emerald-100"
+                aria-label="Dismiss banner"
+              >
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -844,7 +1076,7 @@ export default function App() {
         />
       )}
 
-      {/* Google Account & Switch Account Modal */}
+      {/* Account & Workspace Storage Modal (Local Free Mode + Google Cloud) */}
       <GoogleAccountModal
         isOpen={showAccountModal}
         onClose={() => setShowAccountModal(false)}
@@ -856,6 +1088,16 @@ export default function App() {
         lastSavedTime={lastSavedTime}
         cloudSynced={cloudSynced}
         errorMessage={authErrorNotice}
+        onClearError={() => setAuthErrorNotice(null)}
+        activeLocalProfile={activeLocalProfile}
+        localProfiles={localProfiles}
+        onSelectLocalProfile={handleSelectLocalProfile}
+        onCreateLocalProfile={handleCreateLocalProfile}
+        onUpdateActiveProfileName={handleUpdateActiveProfileName}
+        onExportBackup={handleExportBackup}
+        onImportBackup={handleImportBackup}
+        preferLocalMode={preferLocalMode}
+        onTogglePreferLocalMode={handleTogglePreferLocalMode}
       />
 
       {/* Restart Ideas & Start Afresh Modal */}

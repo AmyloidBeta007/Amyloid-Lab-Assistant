@@ -1813,33 +1813,29 @@ export const AIWritingBrainstormStudio: React.FC<AIWritingBrainstormStudioProps>
                 </div>
 
                 <div className="space-y-1.5 pl-2 text-slate-600 text-[11px]">
-                  <div className="font-semibold text-slate-800">Quick 4-step fix:</div>
+                  <div className="font-semibold text-slate-800">Quick 3-step fix (takes 30 seconds):</div>
                   <div className="flex items-start gap-1.5">
                     <span className="text-teal-700 font-bold">•</span>
                     <span>
                       Open{' '}
                       <a
-                        href="https://console.firebase.google.com/"
+                        href="https://console.firebase.google.com/project/gen-lang-client-0951683292/authentication/settings"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-teal-700 underline font-semibold inline-flex items-center gap-0.5"
                       >
-                        Firebase Console <ExternalLink className="w-2.5 h-2.5" />
+                        Firebase Authentication Settings <ExternalLink className="w-2.5 h-2.5" />
                       </a>{' '}
-                      and select project <strong>gen-lang-client-0951683292</strong>.
+                      for project <strong>gen-lang-client-0951683292</strong>.
                     </span>
                   </div>
                   <div className="flex items-start gap-1.5">
                     <span className="text-teal-700 font-bold">•</span>
-                    <span>Go to <strong>Build</strong> &gt; <strong>Authentication</strong> &gt; <strong>Settings</strong> tab.</span>
+                    <span>Click the <strong>Authorized domains</strong> tab, then click <strong>Add domain</strong>.</span>
                   </div>
                   <div className="flex items-start gap-1.5">
                     <span className="text-teal-700 font-bold">•</span>
-                    <span>Under <strong>Authorized domains</strong>, click <strong>Add domain</strong>.</span>
-                  </div>
-                  <div className="flex items-start gap-1.5">
-                    <span className="text-teal-700 font-bold">•</span>
-                    <span>Paste the copied hostname (<code className="bg-slate-200 px-1 rounded">{currentHostname}</code>) and click <strong>Done</strong>.</span>
+                    <span>Paste your hostname (<code className="bg-slate-200 px-1 rounded">{currentHostname}</code>, or <code className="bg-slate-200 px-1 rounded">vercel.app</code> for Vercel apps) and click <strong>Add</strong>.</span>
                   </div>
                 </div>
               </div>

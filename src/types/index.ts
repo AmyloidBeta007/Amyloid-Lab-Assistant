@@ -222,6 +222,30 @@ export interface OrfMatch {
   peptide: string;
 }
 
+export interface LocalResearcherProfile {
+  id: string;
+  name: string;
+  email?: string;
+  role: string;
+  color: string;
+  createdAt: string;
+}
+
+export interface WorkspaceBackupPayload {
+  version: string;
+  exportedAt: string;
+  exportedBy: string;
+  papers: ResearchPaper[];
+  protocols: Protocol[];
+  targetOutcomes: TargetOutcomeRecord[];
+  discardedItems: DiscardedItem[];
+  pipelineRuns: BioinformaticsPipelineRun[];
+  actionItems: ActionItem[];
+  moodLogs: MoodLogEntry[];
+  slots: LabSlotBooking[];
+  brainstormIdeas: any[];
+}
+
 export interface SequenceAnalysisResult {
   rawSequence: string;
   cleanedSequence: string;
