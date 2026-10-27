@@ -989,29 +989,19 @@ className="w-full flex items-center justify-center gap-3 px-4 py-2.5 bg-slate-90
           <span>Hesitant users? Switch to 100% Free Local Mode (No login required)</span>
         </button>
       </div>
-    </div>
-  );
-};
-                </div>
-              )}
-            </div>
-          )}
-        </div>
 
-        {/* Footer */}
-        <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
-          <div className="flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
-            <span>Zero Fees • 100% Client-Side Ready</span>
-          </div>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="font-medium text-slate-600 hover:text-slate-900"
-          >
-            Close
-          </button>
+      <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
+        <div className="flex items-center gap-1.5">
+          <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
+          <span>Zero Fees • 100% Client-Side Ready</span>
         </div>
+        <button
+          type="button"
+          onClick={handleClose}
+          className="font-medium text-slate-600 hover:text-slate-900"
+        >
+          Close
+        </button>
       </div>
     </div>
   );
