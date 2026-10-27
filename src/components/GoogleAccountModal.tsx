@@ -966,22 +966,6 @@ export const GoogleAccountModal: React.FC<GoogleAccountModalProps> = ({
                         </>
                       )}
                     </button>
-                  </div>
-
-                  {/* How to Look Authentic & Remove gen-lang-client... */}
-                  <div className="p-3 bg-gradient-to-br from-indigo-50/70 to-slate-50 rounded-xl border border-indigo-100 text-xs space-y-2.5">
-                    <div className="flex items-start gap-2">
-                      <Sparkles className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-bold text-indigo-950">
-                          Remove &ldquo;gen-lang-client...&rdquo; &amp; Look Authentic
-                        </p>
-                        <p className="text-[11px] text-indigo-900/80 leading-relaxed">
-                          To make Google display <strong>&ldquo;to continue to Amyloid Lab Assistant&rdquo;</strong> instead of the default project ID:
-                        </p>
-                      </div>
-                    </div>
-
                     <div className="space-y-2 text-[11px] text-slate-700 pl-1 border-l-2 border-indigo-200">
                       <div>
                         <span className="font-bold text-slate-900">1. Set Your App Display Name (Free):</span>
