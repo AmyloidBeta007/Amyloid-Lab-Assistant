@@ -144,6 +144,14 @@ export const googleSignIn = async (promptType: 'consent' | 'select_account' = 's
     cachedAccessToken = credential?.accessToken || null;
     return { user: result.user, accessToken: cachedAccessToken };
   } catch (error: any) {
+    if (
+      error?.code === 'auth/popup-closed-by-user' ||
+      error?.code === 'auth/cancelled-popup-request' ||
+      error?.message?.includes('popup-closed-by-user')
+    ) {
+      // User closed or dismissed the popup window - treat as a normal user cancel, not a crash
+      return null;
+    }
     console.error('Google Sign-in error:', error);
     throw error;
   } finally {
@@ -193,6 +201,13 @@ export const switchGoogleAccount = async (): Promise<{ user: User; accessToken: 
     cachedAccessToken = credential?.accessToken || null;
     return { user: result.user, accessToken: cachedAccessToken };
   } catch (error: any) {
+    if (
+      error?.code === 'auth/popup-closed-by-user' ||
+      error?.code === 'auth/cancelled-popup-request' ||
+      error?.message?.includes('popup-closed-by-user')
+    ) {
+      return null;
+    }
     console.error('Google Switch Account error:', error);
     throw error;
   } finally {
@@ -222,6 +237,13 @@ export const requestWorkspaceScopes = async (): Promise<string | null> => {
     }
     return cachedWorkspaceToken || cachedAccessToken;
   } catch (error: any) {
+    if (
+      error?.code === 'auth/popup-closed-by-user' ||
+      error?.code === 'auth/cancelled-popup-request' ||
+      error?.message?.includes('popup-closed-by-user')
+    ) {
+      return null;
+    }
     console.error('Workspace scope authorization error:', error);
     throw error;
   } finally {

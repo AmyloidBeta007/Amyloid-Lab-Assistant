@@ -270,8 +270,14 @@ export default function App() {
         setTimeout(() => setRestartToast(null), 4000);
       }
     } catch (err: any) {
-      setAuthErrorNotice(err?.message || 'Failed to sign in with Google');
-      setShowAccountModal(true);
+      if (
+        err?.code !== 'auth/popup-closed-by-user' &&
+        err?.code !== 'auth/cancelled-popup-request' &&
+        !err?.message?.includes('popup-closed-by-user')
+      ) {
+        setAuthErrorNotice(err?.message || 'Failed to sign in with Google');
+        setShowAccountModal(true);
+      }
     } finally {
       setIsSigningIn(false);
     }
@@ -288,8 +294,14 @@ export default function App() {
         setTimeout(() => setRestartToast(null), 4000);
       }
     } catch (err: any) {
-      setAuthErrorNotice(err?.message || 'Failed to switch Google account');
-      setShowAccountModal(true);
+      if (
+        err?.code !== 'auth/popup-closed-by-user' &&
+        err?.code !== 'auth/cancelled-popup-request' &&
+        !err?.message?.includes('popup-closed-by-user')
+      ) {
+        setAuthErrorNotice(err?.message || 'Failed to switch Google account');
+        setShowAccountModal(true);
+      }
     } finally {
       setIsSigningIn(false);
     }
